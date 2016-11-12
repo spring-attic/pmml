@@ -1,1 +1,7 @@
-# pmml
+# PMML Processor
+
+To learn more about this application and the supported properties, please review the following details.
+
+include::spring-cloud-starter-stream-processor-pmml/README.adoc[]
+
+The PMML processor uses link:https://github.com/jpmml/jpmml-evaluator[Java Evaluator API for PMML] library and it is developed and maintained by Villu Ruusmann.
