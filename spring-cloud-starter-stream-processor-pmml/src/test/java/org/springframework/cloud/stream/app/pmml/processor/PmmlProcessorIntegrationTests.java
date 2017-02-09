@@ -28,40 +28,39 @@ import org.junit.runner.RunWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.IntegrationTest;
-import org.springframework.boot.test.SpringApplicationConfiguration;
-import org.springframework.boot.test.WebIntegrationTest;
-import org.springframework.cloud.stream.annotation.Bindings;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.messaging.Processor;
 import org.springframework.cloud.stream.test.binder.MessageCollector;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.junit4.SpringRunner;
 
 /**
  * Integration Tests for PmmlProcessor.
  *
  * @author Eric Bottard
  * @author Gary Russell
+ * @author Artem Bilan
  */
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = PmmlProcessorIntegrationTests.PmmlProcessorApplication.class)
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
+		properties = "pmml.modelLocation=classpath:pmml/iris-flower-classification-naive-bayes-1.pmml.xml")
 @DirtiesContext
-@IntegrationTest({"server.port=-1", "pmml.modelLocation=classpath:pmml/iris-flower-classification-naive-bayes-1.pmml.xml"})
 public abstract class PmmlProcessorIntegrationTests {
 
 	@Autowired
-	@Bindings(PmmlProcessorConfiguration.class)
 	protected Processor channels;
 
 	@Autowired
 	protected MessageCollector messageCollector;
 
-	@WebIntegrationTest({"pmml.inputs:Sepal.Length = payload.sepalLength," +
-			"Sepal.Width = payload.sepalWidth," +
-			"Petal.Length = payload.petalLength," +
-			"Petal.Width = payload.petalWidth",
-			"pmml.outputs: Predicted_Species=payload.predictedSpecies"})
+	@TestPropertySource(properties = {
+			"pmml.inputs:Sepal.Length = payload.sepalLength," +
+					"Sepal.Width = payload.sepalWidth," +
+					"Petal.Length = payload.petalLength," +
+					"Petal.Width = payload.petalWidth",
+			"pmml.outputs: Predicted_Species=payload.predictedSpecies" })
 	public static class SimpleMappingTests extends PmmlProcessorIntegrationTests {
 
 		@Test
@@ -79,7 +78,6 @@ public abstract class PmmlProcessorIntegrationTests {
 
 	}
 
-	@WebIntegrationTest
 	public static class NoMappingTests extends PmmlProcessorIntegrationTests {
 
 		@Test
@@ -95,7 +93,8 @@ public abstract class PmmlProcessorIntegrationTests {
 			petal.put("Width", "1.5");
 			channels.input().send(MessageBuilder.withPayload(payload).build());
 
-			assertThat(messageCollector.forChannel(channels.output()), receivesPayloadThat(IsMapContaining.hasEntry("Predicted_Species", "versicolor")));
+			assertThat(messageCollector.forChannel(channels.output()),
+					receivesPayloadThat(IsMapContaining.hasEntry("Predicted_Species", "versicolor")));
 		}
 
 	}
