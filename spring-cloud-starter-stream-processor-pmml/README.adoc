@@ -3,6 +3,26 @@
 
 A processor that evaluates a machine learning model stored in PMML format.
 
+== Input
+
+=== Headers
+
+N/A
+
+=== Payload
+
+* `PMML model data`
+
+== Output
+
+=== Headers
+
+N/A
+
+=== Payload
+
+* `Tuple carrying information about the evaluated data`
+
 == Options
 
 The **$$pmml$$** $$processor$$ has the following options:
@@ -19,5 +39,18 @@ $$pmml.outputs$$:: $$How to emit evaluation results in the output message as msg
 == Build
 
 ```
-$> mvn package
+$ ./mvnw clean install -PgenerateApps
+$ cd apps
+```
+You can find the corresponding binder based projects here.
+You can then cd into one of the folders and build it:
+```
+$ ./mvnw clean package
+```
+
+== Examples
+
+```
+java -jar pmml-processor.jar --pmml.modelLocation= --pmml.modelName="
+java -jar pmml-processor.jar --pmml.modelLocation= --pmml.modelNameExpression="
 ```
