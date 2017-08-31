@@ -35,7 +35,6 @@ $$pmml.model-name-expression$$:: $$If the model file contains multiple models, t
 $$pmml.outputs$$:: $$How to emit evaluation results in the output message as msgProperty->SpEL.$$ *($$java.util.Map<java.lang.String,org.springframework.expression.Expression>$$, default: `$$<none>$$`)*
 //end::configuration-properties[]
 
-//end::ref-doc[]
 == Build
 
 ```
@@ -54,3 +53,4 @@ $ ./mvnw clean package
 java -jar pmml-processor.jar --pmml.modelLocation= --pmml.modelName="
 java -jar pmml-processor.jar --pmml.modelLocation= --pmml.modelNameExpression="
 ```
+//end::ref-doc[]
