@@ -16,13 +16,11 @@
 
 package org.springframework.cloud.stream.app.pmml.processor;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.springframework.cloud.stream.test.matcher.MessageQueueMatcher.receivesPayloadThat;
-
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 
-import org.hamcrest.collection.IsMapContaining;
+import org.hamcrest.core.StringContains;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -31,10 +29,15 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.messaging.Processor;
 import org.springframework.cloud.stream.test.binder.MessageCollector;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.springframework.cloud.stream.test.matcher.MessageQueueMatcher.receivesPayloadThat;
 
 /**
  * Integration Tests for PmmlProcessor.
@@ -42,6 +45,7 @@ import org.springframework.test.context.junit4.SpringRunner;
  * @author Eric Bottard
  * @author Gary Russell
  * @author Artem Bilan
+ * @author Christian Tzolov
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
@@ -61,6 +65,52 @@ public abstract class PmmlProcessorIntegrationTests {
 					"Petal.Length = payload.petalLength," +
 					"Petal.Width = payload.petalWidth",
 			"pmml.outputs: Predicted_Species=payload.predictedSpecies" })
+	public static class SimpleMappingJsonInputTests extends PmmlProcessorIntegrationTests {
+
+		@Test
+		public void testEvaluation() {
+			String payload = "{ \"sepalLength\": 6.4, \"sepalWidth\": 3.2, \"petalLength\":4.5, \"petalWidth\":1.5 }";
+			channels.input().send(MessageBuilder
+					.withPayload(payload)
+					.setHeader(MessageHeaders.CONTENT_TYPE, "application/json").build());
+
+			assertThat(messageCollector.forChannel(channels.output()),
+					receivesPayloadThat(StringContains.containsString("\"predictedSpecies\":\"versicolor\"")));
+		}
+
+		@Test
+		public void testEvaluationOriginalContentType() {
+			String payload = "{ \"sepalLength\": 6.4, \"sepalWidth\": 3.2, \"petalLength\":4.5, \"petalWidth\":1.5 }";
+			channels.input().send(MessageBuilder
+					.withPayload(payload)
+					.setHeader(MessageHeaders.CONTENT_TYPE, "text/plain")
+					.setHeader("originalContentType", "application/json;charset=UTF-8")
+					.build());
+
+			assertThat(messageCollector.forChannel(channels.output()),
+					receivesPayloadThat(StringContains.containsString("\"predictedSpecies\":\"versicolor\"")));
+		}
+
+		@Test
+		public void testEvaluationDefaultContentType() {
+			String payload = "{ \"sepalLength\": 6.4, \"sepalWidth\": 3.2, \"petalLength\":4.5, \"petalWidth\":1.5 }";
+			channels.input().send(MessageBuilder
+					.withPayload(payload)
+					.build());
+
+			assertThat(messageCollector.forChannel(channels.output()),
+					receivesPayloadThat(StringContains.containsString("\"predictedSpecies\":\"versicolor\"")));
+		}
+
+	}
+
+
+	@TestPropertySource(properties = {
+			"pmml.inputs:Sepal.Length = payload.sepalLength," +
+					"Sepal.Width = payload.sepalWidth," +
+					"Petal.Length = payload.petalLength," +
+					"Petal.Width = payload.petalWidth",
+			"pmml.outputs: Predicted_Species=payload.predictedSpecies" })
 	public static class SimpleMappingTests extends PmmlProcessorIntegrationTests {
 
 		@Test
@@ -73,7 +123,7 @@ public abstract class PmmlProcessorIntegrationTests {
 			channels.input().send(MessageBuilder.withPayload(payload).build());
 
 			assertThat(messageCollector.forChannel(channels.output()),
-					receivesPayloadThat(IsMapContaining.hasEntry("predictedSpecies", "versicolor")));
+					receivesPayloadThat(StringContains.containsString("\"predictedSpecies\":\"versicolor\"")));
 		}
 
 	}
@@ -93,8 +143,10 @@ public abstract class PmmlProcessorIntegrationTests {
 			petal.put("Width", "1.5");
 			channels.input().send(MessageBuilder.withPayload(payload).build());
 
-			assertThat(messageCollector.forChannel(channels.output()),
-					receivesPayloadThat(IsMapContaining.hasEntry("Predicted_Species", "versicolor")));
+			BlockingQueue<Message<?>> output = messageCollector.forChannel(channels.output());
+
+			assertThat(output,
+					receivesPayloadThat(StringContains.containsString("\"Predicted_Species\":\"versicolor\"")));
 		}
 
 	}

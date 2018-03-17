@@ -21,7 +21,6 @@ import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.annotation.PostConstruct;
 import javax.xml.bind.JAXBException;
 import javax.xml.transform.Source;
@@ -33,9 +32,10 @@ import org.dmg.pmml.Model;
 import org.dmg.pmml.PMML;
 import org.jpmml.evaluator.Evaluator;
 import org.jpmml.evaluator.FieldValue;
+import org.jpmml.evaluator.InputField;
 import org.jpmml.evaluator.ModelEvaluatorFactory;
-import org.jpmml.model.ImportFilter;
 import org.jpmml.model.JAXBUtil;
+import org.jpmml.model.filters.ImportFilter;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -43,16 +43,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.messaging.Processor;
 import org.springframework.context.annotation.Import;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.context.IntegrationContextUtils;
 import org.springframework.integration.support.MutableMessage;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.tuple.MutableTuple;
 import org.springframework.tuple.Tuple;
 import org.springframework.tuple.TupleBuilder;
@@ -63,6 +64,7 @@ import org.springframework.util.Assert;
  *
  * @author Eric Bottard
  * @author Gary Russell
+ * @author Christian Tzolov
  */
 @EnableBinding(Processor.class)
 @EnableConfigurationProperties(PmmlProcessorProperties.class)
@@ -95,39 +97,37 @@ public class PmmlProcessorConfiguration {
 		}
 	}
 
-	@ServiceActivator(inputChannel = Processor.INPUT, outputChannel = Processor.OUTPUT)
-	public Object evaluate(Message<?> input) {
+	@StreamListener(Processor.INPUT)
+	@SendTo(Processor.OUTPUT)
+	public Object evaluate(Message<Map<?, ?>> input) {
 		Model model = selectModel(input);
-		Evaluator evaluator = modelEvaluatorFactory.newModelManager(pmml, model);
+		Evaluator evaluator = modelEvaluatorFactory.newModelEvaluator(pmml, model);
 
 		Map<FieldName, FieldValue> arguments = new LinkedHashMap<>();
 
-		List<FieldName> activeFields = evaluator.getActiveFields();
-		for (FieldName activeField : activeFields) {
+		List<InputField> inputFields = evaluator.getInputFields();
+		for (InputField inputField : inputFields) {
+			FieldName inputFieldName = inputField.getName();
 			// The raw (ie. user-supplied) value could be any Java primitive value
-			Object rawValue = resolveActiveValue(input, activeField.getValue());
+			Object rawValue = resolveActiveValue(input, inputFieldName.getValue());
 
 			// The raw value is passed through:
 			// 1) outlier treatment,
 			// 2) missing value treatment,
 			// 3) invalid value treatment
 			// and 4) type conversion
-			FieldValue activeValue = evaluator.prepare(activeField, rawValue);
+			FieldValue inputFieldValue = inputField.prepare(rawValue);
 
-			arguments.put(activeField, activeValue);
+			arguments.put(inputFieldName, inputFieldValue);
 		}
 
 		Map<FieldName, ?> results = evaluator.evaluate(arguments);
 
-		MutableMessage<?> result = convertToMutable(input);
+		MutableMessage<?> resultMessage = convertToMutable(input);
 
 		for (Map.Entry<FieldName, ?> entry : results.entrySet()) {
 
-                        String fieldName = null;
-                        if (entry.getKey()==null)
-                            fieldName = DEFAULT_OUTPUT_FIELD;
-                        else 
-			    fieldName = entry.getKey().getValue();
+			String fieldName = (entry.getKey() == null) ? DEFAULT_OUTPUT_FIELD : entry.getKey().getValue();
 
 			Expression expression = properties.getOutputs().get(fieldName);
 			if (expression == null) {
@@ -137,10 +137,10 @@ public class PmmlProcessorConfiguration {
 				logger.debug("Setting result field named " + fieldName + " using SpEL[" + expression + " = "
 						+ entry.getValue() + "]");
 			}
-			expression.setValue(evaluationContext, result, entry.getValue());
+			expression.setValue(evaluationContext, resultMessage, entry.getValue());
 		}
 
-		return result;
+		return resultMessage;
 
 	}
 
