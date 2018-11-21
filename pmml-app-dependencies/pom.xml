@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.springframework.cloud.stream.app</groupId>
 	<artifactId>pmml-app-dependencies</artifactId>
-	<version>2.0.2.RELEASE</version>
+	<version>2.0.3.BUILD-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>pmml-app-dependencies</name>
 	<description>Spring Cloud Stream pmml App Dependencies</description>
@@ -25,7 +25,7 @@
 			<dependency>
 				<groupId>org.springframework.cloud.stream.app</groupId>
 				<artifactId>spring-cloud-starter-stream-processor-pmml</artifactId>
-				<version>2.0.2.RELEASE</version>
+				<version>2.0.3.BUILD-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>org.jpmml</groupId>
@@ -35,7 +35,7 @@
 			<dependency>
 				<groupId>org.springframework.cloud.stream.app</groupId>
 				<artifactId>pmml-app-starters-test-support</artifactId>
-				<version>2.0.2.RELEASE</version>
+				<version>2.0.3.BUILD-SNAPSHOT</version>
 				<scope>test</scope>
 			</dependency>
 		</dependencies>
