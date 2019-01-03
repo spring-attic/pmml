@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.core.StringContains;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -58,6 +60,9 @@ public abstract class PmmlProcessorIntegrationTests {
 
 	@Autowired
 	protected MessageCollector messageCollector;
+
+	@Autowired
+	protected ObjectMapper objectMapper;
 
 	@TestPropertySource(properties = {
 			"pmml.inputs:Sepal.Length = payload.sepalLength," +
@@ -114,13 +119,16 @@ public abstract class PmmlProcessorIntegrationTests {
 	public static class SimpleMappingTests extends PmmlProcessorIntegrationTests {
 
 		@Test
-		public void testEvaluation() {
+		public void testEvaluation() throws JsonProcessingException {
 			Map<String, String> payload = new HashMap<>();
 			payload.put("sepalLength", "6.4");
 			payload.put("sepalWidth", "3.2");
 			payload.put("petalLength", "4.5");
 			payload.put("petalWidth", "1.5");
-			channels.input().send(MessageBuilder.withPayload(payload).build());
+
+			byte[] octetPayload = objectMapper.writeValueAsString(payload).getBytes();
+
+			channels.input().send(MessageBuilder.withPayload(octetPayload).build());
 
 			assertThat(messageCollector.forChannel(channels.output()),
 					receivesPayloadThat(StringContains.containsString("\"predictedSpecies\":\"versicolor\"")));
@@ -131,7 +139,7 @@ public abstract class PmmlProcessorIntegrationTests {
 	public static class NoMappingTests extends PmmlProcessorIntegrationTests {
 
 		@Test
-		public void testEvaluation() {
+		public void testEvaluation() throws JsonProcessingException {
 			Map<String, Object> payload = new HashMap<>();
 			Map<String, String> sepal = new HashMap<>();
 			Map<String, String> petal = new HashMap<>();
@@ -141,7 +149,11 @@ public abstract class PmmlProcessorIntegrationTests {
 			sepal.put("Width", "3.2");
 			petal.put("Length", "4.5");
 			petal.put("Width", "1.5");
-			channels.input().send(MessageBuilder.withPayload(payload).build());
+
+			byte[] octetPayload = objectMapper.writeValueAsString(payload).getBytes();
+
+			channels.input().send(MessageBuilder.withPayload(octetPayload)
+					.build());
 
 			BlockingQueue<Message<?>> output = messageCollector.forChannel(channels.output());
 
