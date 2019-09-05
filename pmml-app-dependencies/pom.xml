@@ -17,7 +17,7 @@
 	</parent>
 
 	<properties>
-		<pmml.version>1.4.0</pmml.version>
+		<pmml.version>1.4.12</pmml.version>
 	</properties>
 
 	<dependencyManagement>

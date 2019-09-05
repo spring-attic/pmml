@@ -21,9 +21,9 @@ import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.annotation.PostConstruct;
 import javax.xml.bind.JAXBException;
-import javax.xml.transform.Source;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,9 +34,6 @@ import org.jpmml.evaluator.Evaluator;
 import org.jpmml.evaluator.FieldValue;
 import org.jpmml.evaluator.InputField;
 import org.jpmml.evaluator.ModelEvaluatorFactory;
-import org.jpmml.model.JAXBUtil;
-import org.jpmml.model.filters.ImportFilter;
-import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,8 +87,7 @@ public class PmmlProcessorConfiguration {
 	@PostConstruct
 	public void setUp() throws IOException, SAXException, JAXBException {
 		try (InputStream is = properties.getModelLocation().getInputStream()) {
-			Source transformedSource = ImportFilter.apply(new InputSource(is));
-			pmml = JAXBUtil.unmarshalPMML(transformedSource);
+			pmml = org.jpmml.model.PMMLUtil.unmarshal(is);
 			Assert.state(!pmml.getModels().isEmpty(),
 					"The provided PMML file at " + properties.getModelLocation() + " does not contain any model");
 		}
